@@ -1,84 +1,85 @@
-from reportlab.lib.pagesizes import A4
+import os
+from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.units import cm
-import json, os
+from reportlab.lib.units import inch
+from datetime import datetime
 
-def generate_pdf_report(business, audit) -> str:
-    path = f"/tmp/{business.name}_report.pdf"
-    doc = SimpleDocTemplate(path, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm,
-                             topMargin=2*cm, bottomMargin=2*cm)
+def generate_pdf_report(business, audit):
+    """
+    Generate a PDF report for a business audit
+    """
+    # Create filename
+    filename = f"/tmp/{business.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    
+    # Create PDF document
+    doc = SimpleDocTemplate(filename, pagesize=letter)
     styles = getSampleStyleSheet()
-    story  = []
-
-    # Header
-    header_style = ParagraphStyle("header", parent=styles["Title"],
-                                   fontSize=22, textColor=colors.HexColor("#1e3a5f"), spaceAfter=6)
-    sub_style = ParagraphStyle("sub", parent=styles["Normal"],
-                                fontSize=11, textColor=colors.grey, spaceAfter=20)
-    story.append(Paragraph(f"Digital Presence Report", header_style))
-    story.append(Paragraph(f"{business.name}  ·  {business.city}  ·  Pavi Creations Audit", sub_style))
-
-    # Total score box
-    score_color = "#16a34a" if audit.total_score >= 80 else \
-                  "#ca8a04" if audit.total_score >= 60 else \
-                  "#ea580c" if audit.total_score >= 40 else "#dc2626"
-    score_data = [["Digital Health Score", f"{audit.total_score}/100  —  {audit.rating}"]]
-    score_table = Table(score_data, colWidths=[9*cm, 8*cm])
+    story = []
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#2E7D32'),
+        spaceAfter=30
+    )
+    story.append(Paragraph(f"Digital Presence Audit Report", title_style))
+    story.append(Spacer(1, 12))
+    
+    # Business Info
+    story.append(Paragraph(f"<b>Business Name:</b> {business.name}", styles['Normal']))
+    story.append(Paragraph(f"<b>Category:</b> {business.category}", styles['Normal']))
+    story.append(Paragraph(f"<b>City:</b> {business.city}", styles['Normal']))
+    story.append(Paragraph(f"<b>Audit Date:</b> {audit.audited_at.strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+    story.append(Spacer(1, 20))
+    
+    # Score Summary
+    story.append(Paragraph("<b>Score Summary</b>", styles['Heading2']))
+    story.append(Spacer(1, 12))
+    
+    score_data = [
+        ["Metric", "Score"],
+        ["Instagram Score", f"{audit.instagram_score}/100"],
+        ["Google Maps Score", f"{audit.google_maps_score}/100"],
+        ["Website Score", f"{audit.website_score}/100"],
+        ["Brand Consistency Score", f"{audit.brand_consistency_score}/100"],
+        ["Customer Engagement Score", f"{audit.customer_engagement_score}/100"],
+        ["Total Score", f"{audit.total_score}/100"],
+        ["Rating", audit.rating]
+    ]
+    
+    score_table = Table(score_data, colWidths=[200, 150])
     score_table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,-1), colors.HexColor(score_color)),
-        ("TEXTCOLOR",  (0,0), (-1,-1), colors.white),
-        ("FONTSIZE",   (0,0), (-1,-1), 13),
-        ("FONTNAME",   (0,0), (-1,-1), "Helvetica-Bold"),
-        ("ROWPADDING", (0,0), (-1,-1), 12),
-        ("ALIGN",      (0,0), (-1,-1), "CENTER"),
-        ("ROUNDEDCORNERS", [8]),
+        ('BACKGROUND', (0, 0), (1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
     ]))
     story.append(score_table)
-    story.append(Spacer(1, 0.5*cm))
-
-    # Score breakdown table
-    pillars = [
-        ["Pillar", "Score", "Max"],
-        ["Instagram Activity",  f"{audit.instagram_score:.0f}", "25"],
-        ["Google Maps Presence",f"{audit.google_maps_score:.0f}", "25"],
-        ["Website / Online Store", f"{audit.website_score:.0f}", "20"],
-        ["Brand Consistency",   f"{audit.brand_consistency_score:.0f}", "15"],
-        ["Customer Engagement", f"{audit.customer_engagement_score:.0f}", "15"],
-    ]
-    t = Table(pillars, colWidths=[10*cm, 4*cm, 3*cm])
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1e3a5f")),
-        ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
-        ("FONTNAME",   (0,0), (-1,0), "Helvetica-Bold"),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f0f4f8")]),
-        ("GRID",       (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
-        ("FONTSIZE",   (0,0), (-1,-1), 11),
-        ("ROWPADDING", (0,0), (-1,-1), 8),
-    ]))
-    story.append(Paragraph("Score Breakdown", styles["Heading2"]))
-    story.append(t)
-    story.append(Spacer(1, 0.5*cm))
-
+    story.append(Spacer(1, 20))
+    
     # Recommendations
-    story.append(Paragraph("Recommendations", styles["Heading2"]))
-    recs = json.loads(audit.recommendations) if isinstance(audit.recommendations, str) else {}
-    label_map = {
-        "instagram": "Instagram", "google_maps": "Google Maps",
-        "website": "Website", "brand_consistency": "Brand",
-        "customer_engagement": "Engagement"
-    }
-    for key, tips in recs.items():
-        story.append(Paragraph(label_map.get(key, key), styles["Heading3"]))
-        for tip in tips:
-            story.append(Paragraph(f"• {tip}", styles["Normal"]))
-        story.append(Spacer(1, 0.3*cm))
-
-    # Footer
-    story.append(Spacer(1, 1*cm))
-    story.append(Paragraph("Generated by Pavi Creations · Data Analytics Internship · June 2026",
-                            ParagraphStyle("footer", parent=styles["Normal"],
-                                           fontSize=9, textColor=colors.grey)))
+    import json
+    recommendations = json.loads(audit.recommendations) if audit.recommendations else {}
+    
+    story.append(Paragraph("<b>Recommendations</b>", styles['Heading2']))
+    story.append(Spacer(1, 12))
+    
+    for category, recs in recommendations.items():
+        if recs:
+            story.append(Paragraph(f"<b>{category.replace('_', ' ').title()}:</b>", styles['Heading3']))
+            for rec in recs:
+                story.append(Paragraph(f"• {rec}", styles['Normal']))
+                story.append(Spacer(1, 6))
+            story.append(Spacer(1, 12))
+    
+    # Build PDF
     doc.build(story)
-    return path
+    return filename

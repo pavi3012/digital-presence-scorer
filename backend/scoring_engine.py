@@ -1,121 +1,99 @@
-def score_instagram(data) -> float:
-    score = 0.0
-
-    # Follower count (max 5 pts)
-    followers = data.instagram_followers or 0
-    if followers >= 5000:   score += 5
-    elif followers >= 1000: score += 4
-    elif followers >= 500:  score += 3
-    elif followers >= 100:  score += 2
-    elif followers >= 10:   score += 1
-
-    # Posts per week (max 8 pts)
-    ppw = data.instagram_posts_per_week or 0
-    if ppw >= 5:   score += 8
-    elif ppw >= 3: score += 6
-    elif ppw >= 2: score += 4
-    elif ppw >= 1: score += 2
-
-    # Engagement rate (max 7 pts)
-    er = data.instagram_engagement_rate or 0.0
-    if er >= 5.0:   score += 7
-    elif er >= 3.0: score += 5
-    elif er >= 1.5: score += 3
-    elif er >= 0.5: score += 1
-
-    # Bio completeness (max 5 pts)
-    if data.instagram_bio_complete:
-        score += 5
-
-    return min(score, 25.0)
-
-
-def score_google_maps(data) -> float:
-    score = 0.0
-
-    if data.google_maps_listed:    score += 5   # Listed at all
-    if data.google_maps_hours_set: score += 3   # Business hours filled
-
-    # Rating (max 7 pts)
-    rating = data.google_maps_rating or 0.0
-    if rating >= 4.5:   score += 7
-    elif rating >= 4.0: score += 5
-    elif rating >= 3.5: score += 3
-    elif rating >= 3.0: score += 1
-
-    # Number of reviews (max 6 pts)
-    reviews = data.google_maps_reviews or 0
-    if reviews >= 100: score += 6
-    elif reviews >= 50: score += 5
-    elif reviews >= 20: score += 3
-    elif reviews >= 5:  score += 1
-
-    # Photos uploaded (max 4 pts)
-    photos = data.google_maps_photos or 0
-    if photos >= 20:  score += 4
-    elif photos >= 10: score += 3
-    elif photos >= 5:  score += 2
-    elif photos >= 1:  score += 1
-
-    return min(score, 25.0)
-
-
-def score_website(data) -> float:
-    score = 0.0
-    if data.has_website:            score += 8
-    if data.website_mobile_friendly: score += 5
-    if data.website_load_fast:       score += 4
-    if data.website_contact_visible: score += 3
-    return min(score, 20.0)
-
-
-def score_brand_consistency(data) -> float:
-    score = 0.0
-    if data.same_name_across_platforms:  score += 5
-    if data.same_logo_across_platforms:  score += 5
-    if data.consistent_colors:           score += 5
-    return min(score, 15.0)
-
-
-def score_customer_engagement(data) -> float:
-    score = 0.0
-    if data.replies_to_reviews:       score += 5
-    if data.whatsapp_business_active: score += 5
-
-    # Response time scoring (max 5 pts)
-    hours = data.average_response_time_hours or 48
-    if hours <= 1:    score += 5
-    elif hours <= 3:  score += 4
-    elif hours <= 12: score += 3
-    elif hours <= 24: score += 2
-    elif hours <= 48: score += 1
-
-    return min(score, 15.0)
-
-
-def get_rating(total: float) -> tuple[str, str]:
-    if total >= 80:   return "Excellent", "#16a34a"
-    elif total >= 60: return "Good",      "#ca8a04"
-    elif total >= 40: return "Average",   "#ea580c"
-    else:             return "Poor",      "#dc2626"
-
-
-def compute_total_score(data) -> dict:
-    insta   = score_instagram(data)
-    google  = score_google_maps(data)
-    website = score_website(data)
-    brand   = score_brand_consistency(data)
-    engage  = score_customer_engagement(data)
-    total   = insta + google + website + brand + engage
-    rating, color = get_rating(total)
-
+def compute_total_score(data):
+    """
+    Calculate scores based on business input data
+    """
+    # Instagram Score (0-100)
+    instagram_score = 0
+    if data.instagram_handle:
+        if data.instagram_followers:
+            instagram_score += min(data.instagram_followers / 10000 * 20, 20)
+        if data.instagram_posts_per_week:
+            instagram_score += min(data.instagram_posts_per_week * 5, 25)
+        if data.instagram_engagement_rate:
+            instagram_score += min(data.instagram_engagement_rate * 10, 30)
+        if data.instagram_bio_complete:
+            instagram_score += 25
+    
+    # Google Maps Score (0-100)
+    google_maps_score = 0
+    if data.google_maps_listed:
+        google_maps_score += 20
+        if data.google_maps_rating:
+            google_maps_score += (data.google_maps_rating / 5) * 30
+        if data.google_maps_reviews:
+            google_maps_score += min(data.google_maps_reviews / 50 * 30, 30)
+        if data.google_maps_photos:
+            google_maps_score += min(data.google_maps_photos / 20 * 10, 10)
+        if data.google_maps_hours_set:
+            google_maps_score += 10
+    
+    # Website Score (0-100)
+    website_score = 0
+    if data.has_website:
+        website_score += 30
+        if data.website_mobile_friendly:
+            website_score += 25
+        if data.website_load_fast:
+            website_score += 25
+        if data.website_contact_visible:
+            website_score += 20
+    
+    # Brand Consistency Score (0-100)
+    brand_consistency_score = 0
+    if data.same_name_across_platforms:
+        brand_consistency_score += 40
+    if data.same_logo_across_platforms:
+        brand_consistency_score += 30
+    if data.consistent_colors:
+        brand_consistency_score += 30
+    
+    # Customer Engagement Score (0-100)
+    customer_engagement_score = 0
+    if data.replies_to_reviews:
+        customer_engagement_score += 40
+    if data.whatsapp_business_active:
+        customer_engagement_score += 30
+    if data.average_response_time_hours:
+        if data.average_response_time_hours <= 1:
+            customer_engagement_score += 30
+        elif data.average_response_time_hours <= 24:
+            customer_engagement_score += 20
+        elif data.average_response_time_hours <= 48:
+            customer_engagement_score += 10
+    
+    # Total Score (average of all scores)
+    total_score = (
+        instagram_score +
+        google_maps_score +
+        website_score +
+        brand_consistency_score +
+        customer_engagement_score
+    ) / 5
+    
+    # Determine rating
+    if total_score >= 90:
+        rating = "Excellent"
+        color = "#4CAF50"
+    elif total_score >= 75:
+        rating = "Good"
+        color = "#8BC34A"
+    elif total_score >= 60:
+        rating = "Average"
+        color = "#FFC107"
+    elif total_score >= 40:
+        rating = "Poor"
+        color = "#FF9800"
+    else:
+        rating = "Critical"
+        color = "#F44336"
+    
     return {
-        "instagram_score":           insta,
-        "google_maps_score":         google,
-        "website_score":             website,
-        "brand_consistency_score":   brand,
-        "customer_engagement_score": engage,
-        "total_score":               round(total, 1),
-        "rating":                    rating,
-        "color":                     color,
+        "instagram_score": round(instagram_score, 2),
+        "google_maps_score": round(google_maps_score, 2),
+        "website_score": round(website_score, 2),
+        "brand_consistency_score": round(brand_consistency_score, 2),
+        "customer_engagement_score": round(customer_engagement_score, 2),
+        "total_score": round(total_score, 2),
+        "rating": rating,
+        "color": color
     }

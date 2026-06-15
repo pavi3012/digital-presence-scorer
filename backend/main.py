@@ -3,11 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import json
 
-from database import get_db, init_db, Business, AuditScore
-from models import BusinessInput, ScoreResponse
-from scoring_engine import compute_total_score
-from recommendations import generate_recommendations
-from pdf_report import generate_pdf_report
+# ✅ Fixed imports - added 'backend.' prefix
+from backend.database import get_db, init_db, Business, AuditScore
+from backend.models import BusinessInput, ScoreResponse
+from backend.scoring_engine import compute_total_score
+from backend.recommendations import generate_recommendations
+from backend.pdf_report import generate_pdf_report
 
 app = FastAPI(title="Digital Presence Scorer API", version="1.0.0")
 
